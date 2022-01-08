@@ -42,7 +42,7 @@ func routes(ctx *fasthttp.RequestCtx) {
 			handler(ctx)
 		} else {
 			utils.ResponseHandler(ctx, fasthttp.StatusForbidden,
-				utils.GenerateErrorMessage("Forbidden", "Forbidden", nil))
+				utils.GenerateResponse("Forbidden", "Forbidden", nil))
 		}
 
 	} else if strings.Contains(path, "todo-items") {

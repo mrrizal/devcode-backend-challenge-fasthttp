@@ -6,15 +6,22 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-func GenerateErrorMessage(status, message string, data interface{}) map[string]interface{} {
-	errorMessage := make(map[string]interface{})
-	errorMessage["status"] = status
-	errorMessage["message"] = message
-	errorMessage["data"] = data
-	return errorMessage
+type MessageStruct struct {
+	Status  interface{} `json:"status"`
+	Message interface{} `json:"message"`
+	Data    interface{} `json:"data"`
 }
 
-func ResponseHandler(ctx *fasthttp.RequestCtx, statusCode int, message map[string]interface{}) {
+func GenerateResponse(status, message string, data interface{}) MessageStruct {
+	response := MessageStruct{
+		Status:  status,
+		Message: message,
+		Data:    data,
+	}
+	return response
+}
+
+func ResponseHandler(ctx *fasthttp.RequestCtx, statusCode int, message MessageStruct) {
 	ctx.Response.Header.Set("Content-Type", "application/json")
 	ctx.Response.SetStatusCode(statusCode)
 	if err := json.NewEncoder(ctx).Encode(message); err != nil {
