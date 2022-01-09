@@ -43,12 +43,20 @@ func CreateActivityGroups(ctx *fasthttp.RequestCtx) {
 		utils.GenerateResponse("Success", "Success", activityGroup))
 }
 
-func GetActivityGroupsByID(ctx *fasthttp.RequestCtx, splitedPath []string) {
+func parseActivityGroupID(ctx *fasthttp.RequestCtx, splitedPath []string) (int, error) {
 	activityGroupID, err := strconv.Atoi(splitedPath[len(splitedPath)-1])
 	if err != nil {
 		utils.ResponseHandler(ctx, fasthttp.StatusNotFound,
 			utils.GenerateResponse("Not Found", fmt.Sprintf("Activity with ID %s Not Found",
 				splitedPath[len(splitedPath)-1]), nil))
+		return 0, err
+	}
+	return activityGroupID, err
+}
+
+func GetActivityGroupsByID(ctx *fasthttp.RequestCtx, splitedPath []string) {
+	activityGroupID, err := parseActivityGroupID(ctx, splitedPath)
+	if err != nil {
 		return
 	}
 	activityGroup := new(models.ActivityGroup)
@@ -108,11 +116,8 @@ func PatchActivityGroups(ctx *fasthttp.RequestCtx) {
 			return
 		}
 
-		activityGroupID, err := strconv.Atoi(splitedPath[len(splitedPath)-1])
+		activityGroupID, err := parseActivityGroupID(ctx, splitedPath)
 		if err != nil {
-			utils.ResponseHandler(ctx, fasthttp.StatusNotFound,
-				utils.GenerateResponse("Not Found", fmt.Sprintf("Activity with ID %s Not Found",
-					splitedPath[len(splitedPath)-1]), nil))
 			return
 		}
 		tempActivityGroup.ID = activityGroupID
@@ -143,4 +148,37 @@ func PatchActivityGroups(ctx *fasthttp.RequestCtx) {
 }
 
 func DeleteActivityGroups(ctx *fasthttp.RequestCtx) {
+	path := strings.TrimSuffix(string(ctx.Path()), "/")
+	splitedPath := strings.Split(path, "/")
+
+	// get activity group by id
+	if len(splitedPath) == 3 {
+		activityGroupID, err := parseActivityGroupID(ctx, splitedPath)
+		if err != nil {
+			return
+		}
+
+		var activityGroup models.ActivityGroup
+		activityGroup.ID = activityGroupID
+
+		rowsAffected, err := activityGroup.Delete()
+		if err != nil {
+			utils.ResponseHandler(ctx, fasthttp.StatusInternalServerError,
+				utils.GenerateResponse("Internal Server Error", err.Error(), nil))
+			return
+		}
+
+		if rowsAffected == 0 {
+			utils.ResponseHandler(ctx, fasthttp.StatusNotFound,
+				utils.GenerateResponse("Not Found", fmt.Sprintf("Activity with ID %s Not Found",
+					splitedPath[len(splitedPath)-1]), nil))
+			return
+		}
+
+		utils.ResponseHandler(ctx, fasthttp.StatusOK,
+			utils.GenerateResponse("Success", "Success", nil))
+		return
+	}
+	utils.ResponseHandler(ctx, fasthttp.StatusForbidden,
+		utils.GenerateResponse("Forbidden", "Forbidden", nil))
 }

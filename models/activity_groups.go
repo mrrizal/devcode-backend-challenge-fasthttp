@@ -152,3 +152,24 @@ func (activityGroup ActivityGroup) Update() (int, error) {
 	}
 	return int(rowsAffected), nil
 }
+
+func (activityGroup ActivityGroup) Delete() (int, error) {
+	db := database.DBConn
+	stmt, err := db.Prepare("update activities set deleted_at=? where deleted_at is null and id=?")
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	resp, err := stmt.Exec(time.Now(), activityGroup.ID)
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, err := resp.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return int(rowsAffected), nil
+}
