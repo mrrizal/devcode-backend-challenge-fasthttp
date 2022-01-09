@@ -90,6 +90,56 @@ func GetActivityGroups(ctx *fasthttp.RequestCtx) {
 }
 
 func PatchActivityGroups(ctx *fasthttp.RequestCtx) {
+	path := strings.TrimSuffix(string(ctx.Path()), "/")
+	splitedPath := strings.Split(path, "/")
+
+	if len(splitedPath) == 3 {
+		var tempActivityGroup models.ActivityGroup
+
+		if err := json.Unmarshal(ctx.PostBody(), &tempActivityGroup); err != nil {
+			utils.ResponseHandler(ctx, fasthttp.StatusBadRequest,
+				utils.GenerateResponse("Bad Request", err.Error(), nil))
+			return
+		}
+
+		if err := tempActivityGroup.Validate(); err != nil {
+			utils.ResponseHandler(ctx, fasthttp.StatusBadRequest,
+				utils.GenerateResponse("Bad Request", err.Error(), nil))
+			return
+		}
+
+		activityGroupID, err := strconv.Atoi(splitedPath[len(splitedPath)-1])
+		if err != nil {
+			utils.ResponseHandler(ctx, fasthttp.StatusNotFound,
+				utils.GenerateResponse("Not Found", fmt.Sprintf("Activity with ID %s Not Found",
+					splitedPath[len(splitedPath)-1]), nil))
+			return
+		}
+		tempActivityGroup.ID = activityGroupID
+
+		rowsAffected, err := tempActivityGroup.Update()
+		if err != nil {
+			utils.ResponseHandler(ctx, fasthttp.StatusInternalServerError,
+				utils.GenerateResponse("Internal Server Error", err.Error(), nil))
+			return
+		}
+
+		if rowsAffected == 0 {
+			utils.ResponseHandler(ctx, fasthttp.StatusNotFound,
+				utils.GenerateResponse("Not Found", fmt.Sprintf("Activity with ID %s Not Found",
+					splitedPath[len(splitedPath)-1]), nil))
+			return
+		}
+
+		var activityGroup models.ActivityGroup
+		activityGroup.GetByID(activityGroupID, &activityGroup)
+
+		utils.ResponseHandler(ctx, fasthttp.StatusOK,
+			utils.GenerateResponse("Success", "Success", activityGroup))
+		return
+	}
+	utils.ResponseHandler(ctx, fasthttp.StatusForbidden,
+		utils.GenerateResponse("Forbidden", "Forbidden", nil))
 }
 
 func DeleteActivityGroups(ctx *fasthttp.RequestCtx) {

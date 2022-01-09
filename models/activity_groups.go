@@ -1,6 +1,7 @@
 package models
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/mail"
@@ -109,4 +110,45 @@ func (ActivityGroup) GetAll(activityGroups *[]ActivityGroup) error {
 		return err
 	}
 	return nil
+}
+
+func (activityGroup ActivityGroup) Update() (int, error) {
+	db := database.DBConn
+	titleIsNotNull := activityGroup.Title != ""
+	emailIsNotNull := activityGroup.Email != ""
+
+	baseQuery := "update activities set "
+	if titleIsNotNull {
+		baseQuery += "title=?, "
+	}
+
+	if emailIsNotNull {
+		baseQuery += "email=?, "
+	}
+
+	baseQuery += "updated_at=? where deleted_at is null and id=?"
+	stmt, err := db.Prepare(baseQuery)
+	if err != nil {
+		return 0, err
+	}
+	defer stmt.Close()
+
+	var resp sql.Result
+	if titleIsNotNull && emailIsNotNull {
+		resp, err = stmt.Exec(activityGroup.Title, activityGroup.Email, time.Now(), activityGroup.ID)
+	} else if titleIsNotNull {
+		resp, err = stmt.Exec(activityGroup.Title, time.Now(), activityGroup.ID)
+	} else if emailIsNotNull {
+		resp, err = stmt.Exec(activityGroup.Email, time.Now(), activityGroup.ID)
+	}
+
+	if err != nil {
+		return 0, err
+	}
+
+	rowsAffected, err := resp.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	return int(rowsAffected), nil
 }
